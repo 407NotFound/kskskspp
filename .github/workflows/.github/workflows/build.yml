@@ -1,0 +1,31 @@
+name: Build dylib
+on: [push, workflow_dispatch]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install clang
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang lld
+      - name: Download iOS SDK
+        run: |
+          mkdir -p $HOME/sdk
+          cd $HOME/sdk
+          curl -L -o sdk.tar.gz "https://github.com/xybp888/iOS-SDKs/archive/refs/heads/master.tar.gz"
+          tar xzf sdk.tar.gz
+          mv iOS-SDKs-master/iPhoneOS14.5.sdk iPhoneOS14.5.sdk
+      - name: Compile
+        run: |
+          SDK=$HOME/sdk/iPhoneOS14.5.sdk
+          clang++ -target arm64-apple-ios14.5 -isysroot $SDK -fobjc-arc -O2 -dynamiclib \
+            -fuse-ld=lld \
+            -install_name @rpath/StandoffMod.dylib \
+            Tweak.mm -o StandoffMod.dylib \
+            -framework Foundation -framework UIKit -framework CoreFoundation -lobjc
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: StandoffMod
+          path: StandoffMod.dylib
